@@ -1,101 +1,96 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import session from 'express-session';
 import bodyParser from 'body-parser';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import { User } from './models/User.js';
 
 const app = express();
 const PORT = 5000;
 
-// In-memory user store (for demo)
-const users = [];
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'admin123';
+// Connect to MongoDB
+mongoose.connect('mongodb://127.0.0.1:27017/project2', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error('MongoDB connection error:', err));
 
-// Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(session({
   secret: 'project2_secret',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: true
 }));
 
-// Serve static files from Project2 folder (frontend HTML)
-app.use(express.static(path.resolve(__dirname, '..')));
+// Serve static files
+app.use(express.static(path.resolve('../')));
 
-// ===== API Endpoints =====
-
-// Auth status
-app.get('/api/auth-status', (req, res) => {
-  if (req.session.admin) {
-    return res.json({ type: 'admin', username: req.session.admin });
-  }
-  if (req.session.user) {
-    const user = users.find(u => u.username === req.session.user);
-    if (user) {
-      return res.json({ type: 'user', username: user.username, email: user.email, registrationDate: user.registrationDate });
-    }
-  }
-  res.json({ type: 'none' });
-});
-
-// Registration endpoint
-app.post('/api/register', (req, res) => {
+// =======================
+// Registration
+// =======================
+app.post('/api/register', async (req, res) => {
   const { username, email, password } = req.body;
+  try {
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) return res.status(400).json({ success: false, error: 'Username or email already exists' });
 
-  // Check for existing username/email
-  const existingUser = users.find(u => u.username === username || u.email === email);
-  if (existingUser) {
-    return res.status(400).json({ success: false, error: 'Username or email already exists' });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashedPassword });
+    await newUser.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
-
-  const newUser = {
-    username,
-    email,
-    password,
-    registrationDate: new Date().toISOString()
-  };
-  users.push(newUser);
-
-  res.json({ success: true });
 });
 
-// Login endpoint
-app.post('/api/login', (req, res) => {
+// =======================
+// User login
+// =======================
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
+  try {
+    const user = await User.findOne({ username, role: 'user' });
+    if (!user) return res.status(401).json({ success: false, error: 'Invalid credentials' });
 
-  // Admin login
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
-    req.session.admin = username;
-    return res.json({ success: true });
-  }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ success: false, error: 'Invalid credentials' });
 
-  // User login
-  const user = users.find(u => u.username === username && u.password === password);
-  if (user) {
     req.session.user = username;
-    return res.json({ success: true });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
-
-  res.status(401).json({ success: false, error: 'Invalid credentials' });
 });
 
+// =======================
 // Admin login
-app.post('/api/admin-login', (req, res) => {
+// =======================
+app.post('/api/admin-login', async (req, res) => {
   const { username, password } = req.body;
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
+  try {
+    const admin = await User.findOne({ username, role: 'admin' });
+    if (!admin) return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+
+    const match = await bcrypt.compare(password, admin.password);
+    if (!match) return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+
     req.session.admin = username;
-    return res.json({ success: true });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
-  res.status(401).json({ success: false, error: 'Invalid admin credentials' });
 });
 
-// Logout (for both admin and user)
+// =======================
+// Logout
+// =======================
 app.post('/api/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) return res.status(500).json({ success: false, error: 'Logout failed' });
@@ -103,7 +98,23 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-// Start server
+// =======================
+// Auth status
+// =======================
+app.get('/api/auth-status', async (req, res) => {
+  try {
+    if (req.session.admin) return res.json({ type: 'admin', username: req.session.admin });
+    if (req.session.user) {
+      const user = await User.findOne({ username: req.session.user });
+      if (user) return res.json({ type: 'user', username: user.username, email: user.email, registrationDate: user.registrationDate });
+    }
+    res.json({ type: 'none' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ type: 'none' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
 });
