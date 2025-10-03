@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+                <h1>Welcome to the Portal</h1>
+                <nav style="margin-bottom: 30px;">
+                        <a href="login.html" style="margin-right: 15px;">User Login</a>
+                        <a href="registration.html" style="margin-right: 15px;">Register</a>
+                        <a href="admin.html">Admin Dashboard</a>
+                </nav>
+                <div id="auth-status"></div>
+        </div>
+        <script>
+            async function updateAuthStatus() {
+                const statusDiv = document.getElementById('auth-status');
+                try {
+                    const res = await fetch('/api/auth-status');
+                    const data = await res.json();
+                    if (data.type === 'admin') {
+                        statusDiv.innerHTML = `<span style='color: green;'>Logged in as Admin</span> <button onclick="logout()">Logout</button>`;
+                    } else if (data.type === 'user') {
+                        statusDiv.innerHTML = `<span style='color: green;'>Logged in as User: ${data.username}</span> <button onclick="logout()">Logout</button>`;
+                    } else {
+                        statusDiv.innerHTML = `<span style='color: red;'>Not logged in</span>`;
+                    }
+                } catch (err) {
+                    statusDiv.innerHTML = `<span style='color: red;'>Unable to fetch status</span>`;
+                }
+            }
+            async function logout() {
+                await fetch('/api/logout', { method: 'POST' });
+                updateAuthStatus();
+            }
+            updateAuthStatus();
+        </script>
+</body>
+</html>

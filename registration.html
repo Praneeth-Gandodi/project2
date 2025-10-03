@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registration Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .register-container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+      width: 350px;
+      text-align: center;
+    }
+
+    .register-container h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .register-container input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .register-container button {
+      width: 100%;
+      padding: 10px;
+      background: #4CAF50;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .register-container button:hover {
+      background: #45a049;
+    }
+
+    .register-container p {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    .register-container a {
+      color: #4CAF50;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <h2>Create Account</h2>
+    <form id="registerForm">
+      <input type="text" name="username" id="username" placeholder="Username" required>
+      <input type="email" name="email" id="email" placeholder="Email" required>
+      <input type="password" name="password" id="password" placeholder="Password" required>
+      <input type="password" name="confirm_password" id="confirm_password" placeholder="Confirm Password" required>
+      <button type="submit">Register</button>
+    </form>
+    <p>Already have an account? <a href="login.html">Login</a></p>
+    <p><a href="index.html">Home</a></p>
+  </div>
+
+  <script>
+    document.getElementById('registerForm').onsubmit = async function(e) {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirm_password').value;
+
+      if (password !== confirm) {
+        alert('Passwords do not match!');
+        return;
+      }
+
+      try {
+        // Use absolute URL if opening HTML directly
+        // Change to '/api/register' if served through Express
+        const res = await fetch('http://localhost:5000/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          alert('Registration successful!');
+          window.location.href = 'login.html';
+        } else {
+          alert(data.error || 'Registration failed.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error. Make sure the backend is running on port 5000.');
+      }
+    };
+  </script>
+</body>
+</html>

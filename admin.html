@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar {
+      background: #4CAF50;
+      padding: 15px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .navbar h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .navbar a {
+      color: white;
+      text-decoration: none;
+      margin-left: 15px;
+    }
+
+    .container {
+      display: flex;
+      margin: 20px;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+      height: calc(100vh - 80px);
+    }
+
+    .sidebar h3 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 10px;
+      color: #333;
+      text-decoration: none;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+
+    .sidebar a:hover {
+      background: #f0f2f5;
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: 20px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .card {
+      background: #fafafa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .logout-btn {
+      background: #e53935;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .logout-btn:hover {
+      background: #d32f2f;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <div class="navbar">
+    <h1>Admin Dashboard</h1>
+    <div>
+      <a href="index.html">Home</a>
+      <a href="login.html">User Login</a>
+      <button class="logout-btn" onclick="logoutAdmin()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Admin Auth -->
+  <div id="admin-auth" style="display:none; justify-content:center; align-items:center; height:80vh;">
+    <form id="adminLoginForm" style="background:#fff; padding:30px; border-radius:10px; box-shadow:0px 4px 10px rgba(0,0,0,0.1); width:350px; text-align:center;">
+      <h2>Admin Login</h2>
+      <input type="text" id="adminUser" placeholder="Admin Username" required><br>
+      <input type="password" id="adminPass" placeholder="Password" required><br>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <!-- Layout -->
+  <div class="container" id="admin-dashboard" style="display:none;">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h3>Navigation</h3>
+      <a href="#">Dashboard Home</a>
+      <a href="#">Manage Users</a>
+      <a href="#">Manage Events</a>
+      <a href="#">Submissions</a>
+      <a href="#">Reports</a>
+      <a href="index.html">Home</a>
+      <a href="login.html">User Login</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+      <div class="card">
+        <h2>Welcome, Admin!</h2>
+        <p>Use the sidebar to manage the system.</p>
+      </div>
+
+      <div class="card">
+        <h2>Quick Stats</h2>
+        <p>✅ Total Users: 150</p>
+        <p>✅ Active Events: 3</p>
+        <p>✅ Pending Submissions: 12</p>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function showDashboard() {
+      document.getElementById('admin-dashboard').style.display = 'flex';
+      document.getElementById('admin-auth').style.display = 'none';
+    }
+    function showLogin() {
+      document.getElementById('admin-dashboard').style.display = 'none';
+      document.getElementById('admin-auth').style.display = 'flex';
+    }
+    async function logoutAdmin() {
+      await fetch('/api/logout', { method: 'POST' });
+      showLogin();
+    }
+    // Check admin session
+    async function checkAdmin() {
+      const res = await fetch('/api/auth-status');
+      const data = await res.json();
+      if (data.type === 'admin') {
+        showDashboard();
+      } else {
+        showLogin();
+      }
+    }
+    checkAdmin();
+    document.getElementById('adminLoginForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const user = document.getElementById('adminUser').value;
+      const pass = document.getElementById('adminPass').value;
+      try {
+        const res = await fetch('/api/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showDashboard();
+        } else {
+          alert(data.error || 'Invalid admin credentials!');
+        }
+      } catch (err) {
+        alert('Network error.');
+      }
+    };
+  </script>
+</body>
+</html>
